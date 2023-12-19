@@ -15,6 +15,7 @@ import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import measurement from "./constants/measurement";
 import environment from "./constants/environment";
+import errorController from "./controllers/errorController";
 
 const app = express();
 
@@ -47,5 +48,7 @@ app.use("/api/v1/history", historyRouter);
 app.all("*", (req: Request, _res: Response, next: NextFunction) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 0));
 });
+
+app.use(errorController);
 
 export default app;
