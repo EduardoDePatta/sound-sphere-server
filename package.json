@@ -7,6 +7,7 @@
   "author": "Eduardo Giacometti De Patta",
   "scripts": {
     "dev": "tsnd --respawn -r tsconfig-paths/register --pretty --transpile-only ./src/server.ts",
+    "prod": "SET NODE_ENV=production && tsnd --respawn -r tsconfig-paths/register --pretty --transpile-only ./src/server.ts",
     "build": "tsc && tsc-alias"
   },
   "dependencies": {
