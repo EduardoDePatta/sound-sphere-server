@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
 import {
@@ -9,6 +9,7 @@ import {
   playlistRouter,
   profileRouter,
 } from "./routers";
+import AppError from "./utils/appError";
 
 const app = express();
 
@@ -25,5 +26,9 @@ app.use("/api/v1/favorite", favoriteRouter);
 app.use("/api/v1/playlist", playlistRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/history", historyRouter);
+
+app.all("*", (req: Request, res: Response, next: NextFunction) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 0));
+});
 
 export default app;
