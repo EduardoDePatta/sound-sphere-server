@@ -10,6 +10,7 @@ import {
   profileRouter,
 } from "./routers";
 import AppError from "./utils/appError";
+import mongoSanitize from "express-mongo-sanitize";
 
 const app = express();
 
@@ -19,6 +20,8 @@ app.use(express.urlencoded({ extended: false, limit: "20kb" }));
 app.use(morgan("dev"));
 
 app.use(express.static("src/public"));
+
+app.use(mongoSanitize());
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/audio", audioRouter);
