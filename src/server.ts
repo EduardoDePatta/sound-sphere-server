@@ -5,6 +5,11 @@ import errors from "#/constants/errors";
 
 dotenv.config();
 
+process.on(errors.UNCAUGHT_EXCEPTION, (error: Error) => {
+  console.log(`ERROR: ${error}\nShutting down...`);
+  process.exit(1);
+});
+
 const DB = process.env.DATABASE?.replace(
   "<PASSWORD>",
   process.env.DATABASE_PASSWORD ?? ""
