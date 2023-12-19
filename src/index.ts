@@ -11,6 +11,7 @@ import {
 } from "./routers";
 import AppError from "./utils/appError";
 import mongoSanitize from "express-mongo-sanitize";
+import helmet from "helmet";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(morgan("dev"));
 app.use(express.static("src/public"));
 
 app.use(mongoSanitize());
+app.use(helmet());
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/audio", audioRouter);
