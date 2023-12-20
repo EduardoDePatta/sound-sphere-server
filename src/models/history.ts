@@ -25,7 +25,7 @@ const historySchema = new Schema<HistoryDocument>(
         ref: "Audio",
       },
       progress: Number,
-      data: {
+      date: {
         type: Date,
         require: true,
       },
@@ -37,7 +37,7 @@ const historySchema = new Schema<HistoryDocument>(
           ref: "Audio",
         },
         progress: Number,
-        data: {
+        date: {
           type: Date,
           require: true,
         },
