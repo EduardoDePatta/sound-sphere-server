@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { mustAuth } from "../middleware";
+import { isAuth, mustAuth } from "../middleware";
 import {
   getUploads,
   updateFollower,
   getPublicUploads,
   getPublicProfile,
   getPublicPlaylist,
+  getRecommendedByProfile,
 } from "../controllers";
 
 const router = Router();
@@ -15,5 +16,6 @@ router.get("/uploads", mustAuth, getUploads);
 router.get("/uploads/:profileId", getPublicUploads);
 router.get("/info/:profileId", getPublicProfile);
 router.get("/playlist/:profileId", getPublicPlaylist);
+router.get("/recommended", isAuth, getRecommendedByProfile);
 
 export { router as profileRouter };
