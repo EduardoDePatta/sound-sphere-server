@@ -5,6 +5,8 @@ import formidable from "formidable";
 import AppError from "../utils/appError";
 import cloudinary from "../cloud";
 import Audio from "../models/audio";
+import { PopulatedFavoriteList } from "../@types/audio";
+import { formatAudio } from "../utils/helper";
 
 export const createAudio: RequestHandler = catchAsync(
   async (req: CreateAudioRequest, res: Response, next: NextFunction) => {
@@ -108,6 +110,25 @@ export const updateAudio: RequestHandler = catchAsync(
         file: audio.file.url,
         poster: audio.poster?.url,
       },
+    });
+  }
+);
+
+export const getLatestUploads: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const limit = 10;
+    const list = await Audio.find()
+      .sort("-createdAt")
+      .limit(limit)
+      .populate<PopulatedFavoriteList>("owner");
+
+    const audios = list.map((item) => {
+      return formatAudio(item);
+    });
+
+    res.status(200).json({
+      status: "success",
+      audios,
     });
   }
 );
