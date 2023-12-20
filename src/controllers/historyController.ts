@@ -1,6 +1,7 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import catchAsync from "../utils/catchAsync";
 import History, { HistoryType } from "../models/history";
+import { PaginationQuery } from "../@types/misc";
 
 export const updateHistory: RequestHandler = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -14,7 +15,7 @@ export const updateHistory: RequestHandler = catchAsync(
     const history: HistoryType = { audio, progress, date };
 
     if (!oldHistory) {
-      History.create({
+      await History.create({
         owner: userId,
         last: history,
         all: [history],
@@ -95,10 +96,10 @@ export const updateHistory: RequestHandler = catchAsync(
 
     res.status(200).json({
       status: "success",
-      histories,
     });
   }
 );
+
 export const removeHistory: RequestHandler = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id: userId } = req.user;
@@ -129,6 +130,86 @@ export const removeHistory: RequestHandler = catchAsync(
     );
     res.status(200).json({
       status: "success",
+    });
+  }
+);
+
+export const getHistories: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { pageNumber = "0", limit = "20" } = req.query as PaginationQuery;
+    const { id: userId } = req.user;
+
+    const histories = await History.aggregate([
+      {
+        $match: {
+          owner: userId,
+        },
+      },
+      {
+        $project: {
+          all: {
+            $slice: [
+              "$all",
+              parseInt(limit) * parseInt(pageNumber),
+              parseInt(limit),
+            ],
+          },
+        },
+      },
+      {
+        $unwind: "$all",
+      },
+      {
+        $lookup: {
+          from: "audios",
+          localField: "all.audio",
+          foreignField: "_id",
+          as: "audioInfo",
+        },
+      },
+      {
+        $unwind: "$audioInfo",
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$all._id",
+          audioId: "$audioInfo._id",
+          date: "$all.date",
+          title: "$audioInfo.title",
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$date",
+            },
+          },
+          audios: {
+            $push: "$$ROOT",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$id",
+          date: "$_id",
+          audios: "$$ROOT.audios",
+        },
+      },
+      {
+        $sort: {
+          date: -1,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      histories,
     });
   }
 );
