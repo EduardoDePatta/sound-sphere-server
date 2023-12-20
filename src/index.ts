@@ -46,7 +46,7 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/history", historyRouter);
 
 app.all("*", (req: Request, _res: Response, next: NextFunction) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 0));
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 500));
 });
 
 app.use(errorController);
