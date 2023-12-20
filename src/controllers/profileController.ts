@@ -1,11 +1,13 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import catchAsync from "../utils/catchAsync";
-import { ObjectId, isValidObjectId } from "mongoose";
+import { ObjectId, PipelineStage, isValidObjectId } from "mongoose";
 import AppError from "../utils/appError";
 import { User } from "../models";
 import { PaginationQuery } from "../@types/misc";
 import Audio, { AudioDocument } from "../models/audio";
 import Playlist from "../models/playlist";
+import History from "../models/history";
+import moment from "moment";
 
 type FollowerStatus = "added" | "removed";
 
@@ -213,6 +215,116 @@ export const getPublicPlaylist: RequestHandler = catchAsync(
     res.status(200).json({
       status: "success",
       playlist: formatedPlaylist,
+    });
+  }
+);
+
+export const getRecommendedByProfile: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+
+    let matchOptions: PipelineStage.Match = {
+      $match: {
+        _id: {
+          $exists: true,
+        },
+      },
+    };
+
+    if (user) {
+      const usersPreviousHistory = await History.aggregate([
+        {
+          $match: {
+            owner: user.id,
+          },
+        },
+        {
+          $unwind: "$all",
+        },
+        {
+          $match: {
+            "all.date": {
+              $gte: moment().subtract(30, "days").toDate(),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$all.audio",
+          },
+        },
+        {
+          $lookup: {
+            from: "audios",
+            localField: "_id",
+            foreignField: "_id",
+            as: "audioData",
+          },
+        },
+        {
+          $unwind: "$audioData",
+        },
+        {
+          $group: {
+            _id: null,
+            category: {
+              $addToSet: "$audioData.category",
+            },
+          },
+        },
+      ]);
+
+      const categories = usersPreviousHistory[0].category;
+
+      if (categories.length) {
+        matchOptions = {
+          $match: {
+            category: {
+              $in: categories,
+            },
+          },
+        };
+      }
+    }
+
+    const audios = await Audio.aggregate([
+      matchOptions,
+      {
+        $sort: {
+          "likes.count": -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+        },
+      },
+      {
+        $unwind: "$owner",
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$_id",
+          title: "$title",
+          category: "$category",
+          about: "$about",
+          file: "$file.url",
+          poster: "$poster.url",
+          owner: { name: "$owner.name", id: "$owner._id" },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      audios,
     });
   }
 );
