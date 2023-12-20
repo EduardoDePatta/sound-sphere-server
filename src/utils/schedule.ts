@@ -11,15 +11,17 @@ const generatePlaylist = async () => {
       },
     },
     {
+      $sample: {
+        size: 20,
+      },
+    },
+    {
       $group: {
         _id: "$category",
         audios: {
           $push: "$$ROOT._id",
         },
       },
-    },
-    {
-      $limit: 20,
     },
   ]);
 
