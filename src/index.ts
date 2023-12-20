@@ -16,6 +16,7 @@ import { rateLimit } from "express-rate-limit";
 import measurement from "./constants/measurement";
 import environment from "./constants/environment";
 import errorController from "./controllers/errorController";
+import "./utils/schedule";
 
 const app = express();
 
