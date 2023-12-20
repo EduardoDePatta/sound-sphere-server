@@ -213,3 +213,99 @@ export const getHistories: RequestHandler = catchAsync(
     });
   }
 );
+
+export const getRecentlyPlayed: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id: userId } = req.user;
+
+    const match = {
+      $match: {
+        owner: userId,
+      },
+    };
+
+    const sliceMatch = {
+      $project: {
+        myHistory: {
+          $slice: ["$all", 5],
+        },
+      },
+    };
+
+    const dateSort = {
+      $project: {
+        histories: {
+          $sortArray: {
+            input: "$myHistory",
+            sortBy: {
+              date: -1,
+            },
+          },
+        },
+      },
+    };
+
+    const audioLookup = {
+      $lookup: {
+        from: "audios",
+        localField: "histories.audio",
+        foreignField: "_id",
+        as: "audioInfo",
+      },
+    };
+
+    const unwindWithIndex = {
+      $unwind: { path: "$histories", includeArrayIndex: "index" },
+    };
+
+    const unwindAudioInfo = {
+      $unwind: "$audioInfo",
+    };
+
+    const userLookup = {
+      $lookup: {
+        from: "users",
+        localField: "audioInfo.owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    };
+
+    const unwindUser = {
+      $unwind: "$owner",
+    };
+
+    const projectResult = {
+      $project: {
+        _id: 0,
+        id: "$audioInfo._id",
+        title: "$audioInfo.title",
+        about: "$audioInfo.about",
+        file: "$audioInfo.file.url",
+        poster: "$audioInfo.poster.url",
+        category: "$audioInfo.category",
+        owner: { name: "$owner.name", id: "$owner._id" },
+
+        date: "$histories.date",
+        progress: "$histories.progress",
+      },
+    };
+
+    const data = await History.aggregate([
+      match,
+      sliceMatch,
+      dateSort,
+      unwindWithIndex,
+      audioLookup,
+      unwindAudioInfo,
+      userLookup,
+      unwindUser,
+      projectResult,
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      data,
+    });
+  }
+);
