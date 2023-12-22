@@ -1,6 +1,8 @@
-import { PopulatedFavoriteList } from "../@types/audio";
+import { Request } from "express";
 import { UserDocument } from "../models";
 import { AudioDocument } from "../models/audio";
+import History from "../models/history";
+import moment from "moment";
 
 export const generateToken = (length: number) => {
   let token = "";
@@ -38,4 +40,58 @@ export const formatAudio = (
       id: audio.owner._id,
     },
   };
+};
+
+export const getUsersPreviousHistory = async (
+  req: Request
+): Promise<string[]> => {
+  const { user } = req;
+
+  const [result] = await History.aggregate([
+    {
+      $match: {
+        owner: user.id,
+      },
+    },
+    {
+      $unwind: "$all",
+    },
+    {
+      $match: {
+        "all.date": {
+          $gte: moment().subtract(30, "days").toDate(),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$all.audio",
+      },
+    },
+    {
+      $lookup: {
+        from: "audios",
+        localField: "_id",
+        foreignField: "_id",
+        as: "audioData",
+      },
+    },
+    {
+      $unwind: "$audioData",
+    },
+    {
+      $group: {
+        _id: null,
+        category: {
+          $addToSet: "$audioData.category",
+        },
+      },
+    },
+  ]);
+
+  if (result) {
+    return result.category;
+  }
+
+  return [];
 };
