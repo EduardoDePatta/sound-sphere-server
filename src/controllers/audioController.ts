@@ -29,7 +29,7 @@ export const createAudio: RequestHandler = catchAsync(
       category,
       owner: ownerId,
       file: {
-        url: audioResponse.url,
+        url: audioResponse.secure_url,
         publicId: audioResponse.public_id,
       },
     });
