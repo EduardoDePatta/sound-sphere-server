@@ -80,6 +80,10 @@ export const sendReVerificationToken: RequestHandler = catchAsync(
       return next(new AppError("Invalid request!", 403));
     }
 
+    if (user.verified) {
+      return next(new AppError("Your account is already verified!", 422));
+    }
+
     await EmailVerificationToken.findOneAndDelete({
       owner: userId,
     });
