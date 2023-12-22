@@ -16,6 +16,14 @@ export const createUser: RequestHandler = catchAsync(
   async (req: CreateUserRequest, res: Response, next: NextFunction) => {
     const { email, password, name } = req.body;
 
+    const alreadyAUser = await User.findOne({
+      email,
+    });
+
+    if (alreadyAUser) {
+      return next(new AppError("Email is already in use!", 403));
+    }
+
     const newUser = await User.create({
       name,
       email,
