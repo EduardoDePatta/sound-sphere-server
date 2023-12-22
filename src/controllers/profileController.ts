@@ -465,3 +465,67 @@ export const getFollowersProfile: RequestHandler = catchAsync(
     });
   }
 );
+
+export const getFollowingsProfile: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id: userId } = req.user;
+    const { limit = "20", pageNumber = "0" } = req.query as PaginationQuery;
+
+    const [result] = await User.aggregate([
+      {
+        $match: {
+          _id: userId,
+        },
+      },
+      {
+        $project: {
+          followers: {
+            $slice: [
+              "$followings",
+              parseInt(pageNumber) * parseInt(limit),
+              parseInt(limit),
+            ],
+          },
+        },
+      },
+      {
+        $unwind: "$followings",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "followings",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      {
+        $unwind: "$userInfo",
+      },
+      {
+        $group: {
+          _id: null,
+          followings: {
+            $push: {
+              id: "$userInfo._id",
+              name: "$userInfo.name",
+              avatar: "$userInfo.avatar.url",
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!result) {
+      return res.status(200).json({
+        status: "success",
+        followings: [],
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      followings: result.followings,
+    });
+  }
+);
