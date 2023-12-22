@@ -1,6 +1,6 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import catchAsync from "../utils/catchAsync";
-import { ObjectId, PipelineStage, isValidObjectId } from "mongoose";
+import { ObjectId, PipelineStage, Types, isValidObjectId } from "mongoose";
 import AppError from "../utils/appError";
 import { User } from "../models";
 import { PaginationQuery } from "../@types/misc";
@@ -411,6 +411,74 @@ export const getFollowersProfile: RequestHandler = catchAsync(
       {
         $match: {
           _id: userId,
+        },
+      },
+      {
+        $project: {
+          followers: {
+            $slice: [
+              "$followers",
+              parseInt(pageNumber) * parseInt(limit),
+              parseInt(limit),
+            ],
+          },
+        },
+      },
+      {
+        $unwind: "$followers",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "followers",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      {
+        $unwind: "$userInfo",
+      },
+      {
+        $group: {
+          _id: null,
+          followers: {
+            $push: {
+              id: "$userInfo._id",
+              name: "$userInfo.name",
+              avatar: "$userInfo.avatar.url",
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!result) {
+      return res.status(200).json({
+        status: "success",
+        followers: [],
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      followers: result.followers,
+    });
+  }
+);
+
+export const getFollowersProfilPublic: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { limit = "20", pageNumber = "0" } = req.query as PaginationQuery;
+    const { profileId } = req.params;
+
+    if (!isValidObjectId(profileId)) {
+      return next(new AppError("Invalid Profile id!", 422));
+    }
+
+    const [result] = await User.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(profileId),
         },
       },
       {
