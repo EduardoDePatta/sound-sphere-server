@@ -1,10 +1,10 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import catchAsync from "../utils/catchAsync";
-import { ObjectId, isValidObjectId } from "mongoose";
+import { isValidObjectId } from "mongoose";
 import AppError from "../utils/appError";
-import Audio, { AudioDocument } from "../models/audio";
+import Audio from "../models/audio";
 import Favorite from "../models/favorite";
-import { PopulatedFavoriteList } from "../@types/audio";
+import { PaginationQuery } from "../@types/misc";
 
 export type FavoriteStatus = "added" | "removed";
 
@@ -82,35 +82,70 @@ export const toggleFavorite: RequestHandler = catchAsync(
 export const getFavorites: RequestHandler = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id: userId } = req.user;
+    const { limit = "20", pageNumber = "0" } = req.query as PaginationQuery;
 
-    const favorite = await Favorite.findOne({ owner: userId }).populate<{
-      items: PopulatedFavoriteList[];
-    }>({
-      path: "items",
-      populate: {
-        path: "owner",
-      },
-    });
-
-    if (!favorite) return res.status(200).json({ audios: [] });
-
-    const audios = favorite.items.map((item) => {
-      return {
-        id: item._id,
-        title: item.title,
-        category: item.category,
-        file: item.file.url,
-        poster: item.poster?.url,
-        owner: {
-          name: item.owner.name,
-          id: item.owner._id,
+    const favorites = await Favorite.aggregate([
+      {
+        $match: {
+          owner: userId,
         },
-      };
-    });
+      },
+      {
+        $project: {
+          audiosIds: {
+            $slice: [
+              "$items",
+              parseInt(limit) * parseInt(pageNumber),
+              parseInt(limit),
+            ],
+          },
+        },
+      },
+      {
+        $unwind: "$audioIds",
+      },
+      {
+        $lookup: {
+          from: "audios",
+          localField: "audioIds",
+          foreignField: "_id",
+          as: "audioInfo",
+        },
+      },
+      {
+        $unwind: "$audioInfo",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "audioIds.owner",
+          foreignField: "_id",
+          as: "ownerInfo",
+        },
+      },
+      {
+        $unwind: "$ownerInfo",
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$audioInfo._id",
+          title: "$audioInfo.title",
+          about: "$audioInfo.about",
+          category: "$audioInfo.category",
+          file: "$audioInfo.file.url",
+          poster: "$audioInfo.poster.url",
+          owner: {
+            name: "$ownerInfo.name",
+            id: "$ownerInfo._id",
+          },
+        },
+      },
+    ]);
 
     res.status(201).json({
       status: "success",
-      audios,
+      audios: favorites,
     });
   }
 );
