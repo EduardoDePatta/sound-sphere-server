@@ -106,6 +106,7 @@ export const getUploads: RequestHandler = catchAsync(
         id: audio._id,
         title: audio.title,
         about: audio.about,
+        category: audio.category,
         file: audio.file.url,
         poster: audio.poster?.url,
         date: audio.createdAt,
@@ -805,6 +806,26 @@ export const getPrivatePlaylistAudios: RequestHandler = catchAsync(
     res.status(200).json({
       status: "success",
       list: playlistResult,
+    });
+  }
+);
+export const getIsFollowing: RequestHandler = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id: userId } = req.user;
+    const { profileId } = req.params;
+
+    if (!isValidObjectId(profileId)) {
+      return next(new AppError("Invalid Profile id", 422));
+    }
+
+    const user = await User.findOne({
+      _id: profileId,
+      followers: userId,
+    });
+
+    res.status(200).json({
+      status: "success",
+      isFolowing: user ? true : false,
     });
   }
 );

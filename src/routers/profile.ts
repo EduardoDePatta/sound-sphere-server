@@ -13,6 +13,7 @@ import {
   getFollowersProfilPublic,
   getPlaylistAudios,
   getPrivatePlaylistAudios,
+  getIsFollowing,
 } from "../controllers";
 
 const router = Router();
@@ -33,5 +34,6 @@ router.get(
   mustAuth,
   getPrivatePlaylistAudios
 );
+router.get("/is-following/:profileId", mustAuth, getIsFollowing);
 
 export { router as profileRouter };
